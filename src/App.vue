@@ -1,192 +1,254 @@
 <template>
-    <div id="app">
-        <ShowMenu v-on:listenShowMenu='listenShowMenu'></ShowMenu>
-        <ShowStyle ref="comShowStyle"></ShowStyle>
-        <ShowResume ref="comShowResume" :resumeData="resumeData"></ShowResume>
-        <transition name="fade">
-            <FormList ref="comFormList" :resumeData="resumeData" v-if="formListShow"
-                      v-on:listenFormList='listenFormList'></FormList>
-        </transition>
-    </div>
+  <div id="app" v-bind:class="{previewMode:previewMode}">
+    <Login id="login" v-bind:class="{loginMode:loginMode}" v-on:exitX="exitX" v-on:login="login" />
+    <SignUp id="signUp" v-bind:class="{signUpMode:signUpMode}" v-on:exitX="exitX" />
+    <Cephalosome class="cephalosome" v-on:preview="preview" v-on:login="login" v-on:signUp="signUp" />
+    <!-- 头部导航 -->
+    <main v-on:click="hide">
+      <EditBox v-bind:resume="resume" class="editBox" />
+      <!-- 左边编辑器 -->
+      <ShowBox v-bind:resume="resume" class="showBox" />
+      <!-- 右边预览 -->
+    </main>
+    <el-button id="exitButton" v-on:click="exitButton" round>退出</el-button>
+    <el-button id="download" v-on:click="download" round>导出</el-button>
+  </div>
 </template>
 
 <script>
-    import ShowMenu from './components/menu/ShowMenu.vue'
-    import ShowStyle from './components/showStyle/ShowStyle.vue'
-    import ShowResume from './components/showResume/ShowResume.vue'
-    import FormList from './components/form/FormList.vue'
-    import resumeData from '../static/resumedata.json'
-    import {str} from './config/comstr.js';
-
-    export default {
-        name: 'app',
-        data(){
-            return {
-                fromDataT: {},
-                formListFlag: false,
-                formListShow: false,
-                resumeData: resumeData,
-                code: str.code
-            }
+import Cephalosome from "./components/Cephalosome";
+import EditBox from "./components/EditBox";
+import ShowBox from "./components/ShowBox";
+import Login from "./components/Login";
+import SignUp from "./components/SignUp";
+import html2canvas from "html2canvas";
+import jsPDF from "jsPDF";
+export default {
+  data() {
+    return {
+      previewMode: false,
+      loginMode: false,
+      signUpMode: false,
+      resume: {
+        // 声明数据
+        profile: {
+          name: "",
+          city: "",
+          bitrh: ""
         },
-        created(){
-            let n = 0;
-            let _this = this;
-
-            this.$nextTick(function () {
-                let len = _this.code.length;
-                // 每10ms 写入一次
-                var setIn = setInterval(function () {
-                    // 只显示作用
-                    _this.$refs.comShowStyle.writeStyleCode(_this.code.substring(0, n));
-                    // 渲染作用
-                    _this.$refs.comShowResume.responseStyleCode(_this.code.substring(0, n));
-                    n++;
-                    if (n >= len) {
-                        // 停止
-                        clearInterval(setIn);
-                    }
-                }, 10);
-            })
-        },
-        methods: {
-            listenShowMenu: function (msg) {
-                // 生成简历 事件
-                if (msg.type == 'fileClick') {
-                    this.formListShow = msg.showFlag;
-                    if (this.formListFlag) {
-                        this.resumeData.formFlag = true;
-                    }
-                }
-                // 下载简历 事件
-                if (msg.type == 'choiceClick') {
-                    var resumeName = this.resumeData.head.intention + "-" + this.resumeData.head.name + "-" + this.resumeData.head.tel;
-                    var htmlcode = document.getElementById('show-resume');
-                    htmlcode.style.width = msg.size.width + 'px';
-                    htmlcode.style.height = msg.size.height + 'px';
-                    // html 转 canvas 再转 pdf
-                    html2canvas(htmlcode, {
-                        onrendered: function (canvas) {
-                            var imgData = canvas.toDataURL('image/png');
-                            //Default export is a4 paper
-                            var doc = new jsPDF();
-                            doc.addImage(imgData, 'PNG', 10, 10);
-                            doc.save(resumeName + '.pdf');
-                        }
-                    });
-                }
-            },
-            listenFormList: function (msg) {
-                if (msg.type == "createResClick") {
-                    this.formListShow = msg.showFlag;
-                }
-                if (msg.type == "fromData") {
-                    this.resumeData = msg.fromData;
-                    this.formListFlag = true;
-                }
-            }
-        },
-        components: {
-            ShowMenu,
-            ShowStyle,
-            ShowResume,
-            FormList
+        //声明工作经历数据
+        work: [
+          {
+            company: "",
+            date: "",
+            content: ""
+          }
+        ],
+        // 声明教育信息
+        education: [
+          {
+            school: "",
+            time: "",
+            degree: ""
+          }
+        ],
+        //声明项目经历
+        project: [
+          {
+            name: "",
+            introduce: "",
+            site: ""
+          }
+        ],
+        //声明获奖情况数组
+        award: [
+          {
+            name: "",
+            time: ""
+          }
+        ],
+        //声明联系方式
+        contact: [
+          {
+            mobile: "",
+            WeChat: "",
+            email: ""
+          }
+        ]
+      }
+    };
+  },
+  methods: {
+    exitButton() {
+      this.previewMode = false;
+      document.body.style.setProperty("height", "100%", "important");
+      document.body.style.setProperty("background", "#fff");
+    },
+    exitX() {
+      this.loginMode = false;
+      this.signUpMode = false;
+    },
+    preview() {
+      this.previewMode = true;
+      this.signUpMode = false;
+      this.loginMode = false;
+      document.body.style.setProperty("height", "auto", "important");
+      document.body.style.setProperty("background", "#F2F6FC");
+    },
+    login() {
+      // this.previewMode = true;
+      this.loginMode = true;
+      this.signUpMode = false;
+    },
+    signUp() {
+      this.signUpMode = true;
+      this.loginMode = false;
+    },
+    hideModal() {
+      this.signUpMode = false;
+      this.loginMode = false;
+    },
+    hide() {
+      this.signUpMode = false;
+      this.loginMode = false;
+    },
+    download() {
+      // window.print()
+      //  ,useCORS=true
+      //   html2canvas(document.body).then(function(canvas) {
+      //     document.body.appendChild(canvas);
+      // });
+      // /*
+      var opts = { useCORS: true };
+      html2canvas(document.querySelector(".showBox")).then(canvas => {
+        let imgData = canvas.toDataURL("image/JPEG");
+        let imgWidth = 210;
+        let pageHeight = 295;
+        let imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let doc = new jsPDF("p", "mm");
+        let position = 0;
+        doc.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          doc.addPage();
+          doc.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
         }
+        doc.save("Resume.pdf");
+      });
+      // */
     }
+  },
+  components: {
+    Cephalosome,
+    EditBox,
+    ShowBox,
+    Login,
+    SignUp
+  }
+};
 </script>
 
-<style>
-    /* 内外边距通常让各个浏览器样式的表现位置不同 */
-    body, div, dl, dt, dd, ul, ol, li, h1, h2, h3, h4, h5,
-    h6, pre, code, form, fieldset, legend, input, textarea,
-    p, blockquote, th, td, hr, button, article, aside, details,
-    figcaption, figure, footer, header, menu, nav, section {
-        margin: 0;
-        padding: 0;
+<style lang="scss">
+html,
+body,
+#app {
+  height: 100%;
+  overflow: visible;
+  position: relative;
+}
+.icon {
+  width: 2em;
+  height: 2em;
+  vertical-align: -0.15em;
+  fill: #fff;
+  overflow: hidden;
+}
+#app {
+  font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif; // height: 100vh;
+  display: flex;
+  flex-direction: column;
+  .cephalosome {
+    position: relative;
+    box-shadow: 0px 0px 3px 2px hsla(0, 0, 0, 0.3);
+    z-index: 1;
+    overflow: hidden;
+  }
+  main {
+    display: flex;
+    flex: 1;
+    // background: #fff;
+    background: #f2f6fc;
+    > .editBox {
+      background: #fff;
+      width: 36em;
+      margin: 16px 8px 16px 16px;
+      box-shadow: 0px 0px 1px 2px hsla(0, 0, 0, 0.1);
+      border-radius: 5px;
+      overflow: hidden;
     }
-
-    input, select, textarea {
-        font-size: 100%;
+    > .showBox {
+      background: #fff;
+      flex: 1;
+      margin: 16px 16px 16px 8px;
+      box-shadow: 0px 0px 1px 2px hsla(0, 0, 0, 0.1);
+      border-radius: 5px;
+      overflow: auto;
     }
-
-    input {
-        outline: none;
-        border-style: none
-    }
-
-    /* 去掉各 Table  cell 的边距并让其边重合 */
-    table {
-        border-collapse: collapse;
-        border-spacing: 0;
-    }
-
-    /* 去除默认边框 */
-    fieldset, img {
-        border: 0;
-    }
-
-    /* 去掉 firefox 下此元素的边框 */
-    abbr, acronym {
-        border: 0;
-        font-variant: normal;
-    }
-
-    /* 一致的 del 样式 */
-    del {
-        text-decoration: line-through;
-    }
-
-    address, caption, cite, code, dfn, em, th, var {
-        font-style: normal;
-        font-weight: 500;
-    }
-
-    /* 去掉列表前的标识, li 会继承 */
-    ol, ul {
-        list-style: none;
-    }
-
-    /* 对齐是排版最重要的因素, 别让什么都居中 */
-    caption, th {
-        text-align: left;
-    }
-
-    a {
-        text-decoration: none;
-    }
-
-    /*清除浮动代码*/
-    .clearfloat:after {
-        display: block;
-        clear: both;
-        content: "";
-        visibility: hidden;
-        height: 0
-    }
-
-    .clearfloat {
-        zoom: 1
-    }
-
-    body, html {
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        margin: 0;
-        min-width: 1024px;
-        font-size: 62.5%;
-    }
-
-    #app {
-        width: 100%;
-        height: 100%;
-    }
-
-    .fade-enter-active, .fade-leave-active {
-        transition: opacity .5s
-    }
-
-    .fade-enter, .fade-leave-active {
-        opacity: 0
-    }
+  }
+}
+.previewMode main {
+  background: #fff;
+}
+.previewMode > #Cephalosome {
+  display: none;
+}
+.previewMode #EditBox {
+  display: none;
+}
+.previewMode #ShowBox {
+  max-width: 65vw;
+  margin: 16px auto !important;
+}
+.previewMode html,
+body,
+#app {
+  height: none;
+  overflow: visible;
+}
+#exitButton,
+#download {
+  display: none;
+}
+.previewMode #exitButton {
+  display: inline-block;
+  position: fixed;
+  top: 16px;
+  right: 16px;
+}
+.previewMode #download {
+  display: inline-block;
+  position: fixed;
+  top: 64px;
+  right: 16px;
+}
+#login,
+#signUp {
+  display: none;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0px 0px 2px 2px hsla(0, 0, 0, 0.3);
+  width: 400px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+#app > .loginMode,
+#app > .signUpMode {
+  display: block;
+}
 </style>
